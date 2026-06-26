@@ -108,10 +108,41 @@ wss.on("connection", (socket) => {
         username: username,
         color: cor,
       });
+      //avisa todos os clientes que entrou
+      broadcast({
+        tipo: "sistema",
+        texto: `${username} entrou no chat`,
+        usuarios: listarUsuarios(),
+      });
+    }
+//cliente saiu 
+socket.on("close", () => {
+      const cliente = clientes.get(socket);
+      if (!cliente) return;
+broadcast({
+        tipo: "sistema",
+        texto: `${username} entrou no chat`,
+        usuarios: listarUsuarios(),
+      });
+    //recebe mensagem de texto (bate-papo)
+    if (msg.tipo === "mensagem") {
+      const cliente = clientes.get(socket);
+      if (!cliente) return;
+
+      const texto = String(msg.texto).trim().slice(0, 500);
+
+      if (!texto) return
+      broadcast({
+        tipo: "mensagem",
+        username: cliente.username,
+        color: cliente.color,
+        texto: texto,
+        data: new Date().toLocaleTimeString ("pt-BR", { hour: '2-digit', minute: '2-digit' }),
+      });
     }
   });
 });
-
+})
 
 
 // -----------------------------------------------------------
