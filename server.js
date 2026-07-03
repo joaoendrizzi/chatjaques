@@ -61,88 +61,111 @@ function proximaCor() {
 // -----------------------------------------------------------
 // 3. Funções auxiliares para envio de mensagens
 // -----------------------------------------------------------
-//enviar json para um cliente específico
+// Enviar JSON para um único cliente
 function enviar(socket, objeto) {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(objeto));
   }
 }
 
-//broadcast para todos os clientes
+// Broadcast (todos os clientes)
 function broadcast(objeto) {
   for (const [socket] of clientes) {
     enviar(socket, objeto);
   }
 }
 
-//listar usuarios
-function listarUsuarios() {
+// Listar usuários
+function listaUsuarios() {
   return [...clientes.values()].map(c => ({
     username: c.username,
-    color: c.color
+    color: c.color,
   }));
 }
+
+
 // -----------------------------------------------------------
 // 4. Eventos WebSocket
 // -----------------------------------------------------------
 wss.on("connection", (socket) => {
-  //4.1 recebe msg do cliente
+  // 4.1 Recebe msg do cliente
   socket.on("message", (dados) => {
     let msg;
     try {
       msg = JSON.parse(dados);
     } catch {
-      return; //deu ruim
+      return; // Deu ruim
     }
-    //tipo: 'entrar' - usuario informou nickname
+
+    // Tipo: "entrar" - usuário informou nickname
     if (msg.tipo === "entrar") {
       const username = String(msg.username).trim().slice(0, 20);
 
-      //registar o cliente
+      // Verificar nickname em uso
+      const nomeEmUso = [...clientes.values()]
+        .some(c => c.username.toLowerCase() === username.toLowerCase());
+
+      if (nomeEmUso || username === "") {
+        enviar(socket, { tipo: "erro", texto: "Nome de usuário já está em uso ou inválido." });
+        return;
+      }
+
+
+      // Registra o cliente
       const cor = proximaCor();
       clientes.set(socket, { username, color: cor });
 
-      //confirma para o cliente o ingresso
+      // Confirma para o cliente o ingresso
       enviar(socket, {
         tipo: "confirmacao",
         username: username,
         color: cor,
       });
-      //avisa todos os clientes que entrou
+
+      // Avisa todos da chegada
       broadcast({
         tipo: "sistema",
-        texto: `${username} entrou no chat`,
-        usuarios: listarUsuarios(),
+        texto: `${username} entrou na sala.`,
+        usuarios: listaUsuarios(),
       });
     }
-//cliente saiu 
-socket.on("close", () => {
-      const cliente = clientes.get(socket);
-      if (!cliente) return;
-broadcast({
-        tipo: "sistema",
-        texto: `${username} entrou no chat`,
-        usuarios: listarUsuarios(),
-      });
-    //recebe mensagem de texto (bate-papo)
+
+    // Recebe mensagem de texto (bate papo)
     if (msg.tipo === "mensagem") {
       const cliente = clientes.get(socket);
       if (!cliente) return;
 
       const texto = String(msg.texto).trim().slice(0, 500);
 
-      if (!texto) return
+      if (!texto) return;
+
       broadcast({
         tipo: "mensagem",
         username: cliente.username,
         color: cliente.color,
         texto: texto,
-        data: new Date().toLocaleTimeString ("pt-BR", { hour: '2-digit', minute: '2-digit' }),
+        hora: new Date().toLocaleTimeString("pt-BR", {
+          hour: "2-digit", minute: "2-digit"
+        }),
+      });
+
+      // 4.2 - Cliente desconectou
+      socket.on("close", () => {
+        const cliente = clientes.get(socket);
+        if (!cliente) return;
+
+        clientes.delete(socket);
+
+        broadcast({
+          tipo: "sistema",
+          texto: `${cliente.username} saiu da sala.`,
+          usuarios: listaUsuarios(),
+        });
       });
     }
   });
 });
-})
+
 
 
 // -----------------------------------------------------------

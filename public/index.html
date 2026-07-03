@@ -117,25 +117,27 @@
     socket = new WebSocket(`${protocol}://${location.host}`);
 
     socket.addEventListener("open", () => {
-      //conectar e enviar o nickname para o servidor
+      // Conecta e envia o nickname
       socket.send(JSON.stringify({
         tipo: "entrar",
-        username: meuUsername
-      }));
+        username: meuUsername,
+      }))
     });
+
     socket.addEventListener("message", (evento) => {
       const msg = JSON.parse(evento.data);
       tratarMensagem(msg);
     });
-    socket.addEventListener("close", ()=>{
-      adicionarSistema("Conexão com o servidor perdida.");
+
+    socket.addEventListener("close", () => {
+      adicionarSistema("Conexão encerrada.");
     });
   }
   // --------------------------------------------------------
   // 2. TRATAR MENSAGENS RECEBIDAS DO SERVIDOR
   // --------------------------------------------------------
   function tratarMensagem(msg) {
-
+console.log(msg);
     // Servidor confirmou o login
     if (msg.tipo === "confirmacao") {
       minhaCor = msg.color;
@@ -208,13 +210,12 @@
     listaUsuarios.innerHTML = "";
     contagemUsuarios.textContent = usuarios.length;
 
-    usuarios.forEach(({username, color}) => {
+    usuarios.forEach(({ username, color }) => {
       const li = document.createElement("li");
       li.innerHTML = `
-      <span class="status-dot"></span>
-      <span style="color:${color}">${escaparHTML(username)}</span>
-      `
-      ;
+        <span class="status-dot"></span>
+        <span style="color:${color}">${escaparHTML(username)}</span>
+      `;
       listaUsuarios.appendChild(li);
     });
   }
@@ -233,7 +234,6 @@
 
     inputMsg.value = "";
     inputMsg.focus();
-
   }
 
   // --------------------------------------------------------
